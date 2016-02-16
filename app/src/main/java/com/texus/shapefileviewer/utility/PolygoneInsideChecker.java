@@ -44,8 +44,9 @@ public class PolygoneInsideChecker {
     }
 
 	public boolean insidePolygon(ArrayList<LatLng> points, LatLng p) {
+        if(p == null) return false;
 		int n = points.size();
-		Log.d("points",""+n);
+		Log.e("points",""+n);
 		int i;
 		double angle = 0;
 		GeoPoints p1 = new GeoPoints();

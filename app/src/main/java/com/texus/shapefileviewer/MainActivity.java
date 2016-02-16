@@ -10,7 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -29,10 +29,12 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.texus.shapefileviewer.adapters.FieldDataAdapter;
+import com.texus.shapefileviewer.component.ComponentInfo;
 import com.texus.shapefileviewer.datamodel.ShapeData;
 import com.texus.shapefileviewer.datamodel.ShapeField;
 import com.texus.shapefileviewer.datamodel.ShapeFieldData;
@@ -48,7 +50,6 @@ import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shp.shapeTypes.Sh
 import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shx.SHX_File;
 import com.texus.shapefileviewer.shape.diewald_shapeFile.shapeFile.ShapeFile;
 import com.texus.shapefileviewer.utility.LOG;
-import com.texus.shapefileviewer.utility.PolygoneInsideChecker;
 import com.texus.shapefileviewer.utility.Utility;
 
 import java.io.File;
@@ -56,22 +57,28 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements FileChooser.FileSelectedListener, OnMapReadyCallback {
 
-    MapView mapView;
-    GoogleMap map;
-    Context mContext;
-    LinearLayout llPopupLayout;
-    LinearLayout searchLayout;
-    EditText etSearch;
-    ListView llSearchList;
-    ImageButton imSearchBack;
+    private static boolean drawing = false;
 
-    FieldDataAdapter adapter;
-    ArrayList<ShapeFieldData> shapeFieldDatas;
+    private MapView         mapView;
+    private GoogleMap       map;
+    private Context         mContext;
+    private static LinearLayout    llPopupLayout;
+    private LinearLayout    searchLayout;
+    private EditText        etSearch;
+    private ListView        llSearchList;
+    private ImageButton     imSearchBack;
+
+    private Polygon selectedPolygon;
+    Marker marker = null;
+
+    private int previousShape = -1;
+
+    private FieldDataAdapter          adapter;
+    private ArrayList<ShapeFieldData> shapeFieldDatas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,10 +96,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                parseTestPolygons();
                 openFileChooserDialog();
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
             }
         });
 
@@ -101,56 +105,101 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         map = mapView.getMap();
         map.getUiSettings().setMyLocationButtonEnabled(true);
         map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-
-
-//        // Needs to call MapsInitializer before doing any CameraUpdateFactory calls
         try {
             MapsInitializer.initialize(this);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        // Updates the location and zoom of the MapView
-//        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(8.863241001886367,
-//                105.04251421185228), 10);
-//        map.animateCamera(cameraUpdate);
         setUpSearchLayout();
 
-        map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-
+        map.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
             @Override
-            public void onMapClick(LatLng point) {
-                Log.e("Map", "Map clicked");
-                int id = getShapeOnClick(point);
-//                if(id != 0) {
-                    Toast.makeText(mContext,"ClickedShape ID:" + id, Toast.LENGTH_LONG).show();
-//                }
+            public void onPolygonClick(Polygon polygon) {
+//                polygon.remove();
+                LOG.log("Polygon CLick","GET ID:" + polygon.getId());
+                setSelected(polygon);
+
             }
         });
+
+        DisplayShapesTask task = new DisplayShapesTask();
+        task.execute();
     }
 
-    public int getShapeOnClick( LatLng latLng) {
-        Databases db = new Databases(mContext);
-        ArrayList<ShapePoint> points = ShapePoint.getAllPointsOfAShape(db);
-        db.close();
-        for(ShapePoint point: points) {
-            ArrayList<LatLng> latLngs = new ArrayList<LatLng>();
-            LOG.log("MainActivity","Checking.... Shape:" + point.shapeId);
-            String[] spiltMain = point.filename.split(":");
-            for(String sub : spiltMain) {
-                String[] splitSub = sub.split(",");
-                double lat = Utility.parseDouble(splitSub[0]);
-                double lon = Utility.parseDouble(splitSub[1]);
-                latLngs.add(new LatLng(lat,lon));
-            }
-            PolygoneInsideChecker checker = new PolygoneInsideChecker(mContext,latLngs,latLng);
-            if(checker.checkPointsInside()) {
-                return point.shapeId;
-            }
+    public int getPolygonID(Polygon polygon) {
+        return Utility.parseInt(polygon.getId().replaceAll("pg","").trim());
+    }
 
+    public void setSelected(Polygon polygon) {
+//        clearPreviousSelectedShpe(selectedPolygon);
+        selectedPolygon = polygon;
+//        polygon.setFillColor(AppConstance.COLOR_SELECTED);
+        int shapeID = getPolygonID(polygon);
+        addMark(getCentroid(shapeID));
+        addInfoWindow(shapeID);
+    }
+
+    public LatLng getCentroid(int shapeId) {
+        ShapePoint point = getAShapePoint(shapeId);
+        ArrayList<LatLng> latLngs = getLatLangs(point.filename);
+        double x = 0.;
+        double y = 0.;
+        int pointCount = latLngs.size();
+        for (LatLng latLang: latLngs){
+            x += latLang.latitude;
+            y += latLang.longitude;
         }
-        return  0;
+        x = x/pointCount;
+        y = y/pointCount;
+        return new LatLng(x,y);
     }
+
+    public void clearPreviousSelectedShpe(Polygon polygon) {
+        if(polygon == null) return;
+        int shapeID = getPolygonID(polygon);
+        polygon.setFillColor(Color.TRANSPARENT);
+
+
+//        polygon.remove();
+//        ShapePoint point = getAShapePoint((shapeID));
+//        plotSHape(point, AppConstance.COLOR_DEFAULT, false);
+    }
+
+    public void addMark(LatLng latLng) {
+        if(marker != null) {
+            marker.remove();
+        }
+        marker = map.addMarker(new MarkerOptions()
+                .position(latLng)
+                .title("Selected Area"));
+
+    }
+
+    public void setAShapeSelected(int shapeId) {
+        ShapePoint point = getAShapePoint((shapeId));
+        plotSHape(point, AppConstance.COLOR_SELECTED, true);
+        previousShape = shapeId;
+    }
+
+    public void clearPreviousSelectedShpe() {
+        ShapePoint point = getAShapePoint(previousShape);
+        plotSHape(point,Color.TRANSPARENT,true);
+        plotSHape(point, AppConstance.COLOR_DEFAULT, false);
+    }
+
+    public ShapePoint getAShapePoint(int shapeID) {
+        Databases db = new Databases(mContext);
+        ShapePoint point = getAShapePoint(db, shapeID);
+        db.close();
+        return  point;
+    }
+
+    public ShapePoint getAShapePoint(Databases db, int shapeID) {
+        return ShapePoint.getAllPointsOfAShape(db, shapeID);
+    }
+
+
+
 
 //    public
     public void addListLayout() {
@@ -173,6 +222,24 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         llSearchList.setAdapter(adapter);
     }
 
+    public void addInfoWindow(int shapeId) {
+        if(llPopupLayout.getChildCount() != 0) return;
+        llPopupLayout.setGravity(Gravity.CENTER | Gravity.BOTTOM);
+        ComponentInfo componentInfo = new ComponentInfo(mContext,llPopupLayout.getHeight());
+        llPopupLayout.addView(componentInfo);
+        componentInfo.setValues(shapeId);
+    }
+
+    public static void removeAddInfoWindow() {
+        llPopupLayout.removeAllViews();
+        llPopupLayout.setGravity(Gravity.CENTER | Gravity.TOP);
+
+    }
+
+
+
+
+
 
     public void refreshList( ArrayList<ShapeFieldData> datas) {
         shapeFieldDatas = datas;
@@ -185,16 +252,12 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
                     clearListLayout();
                     ShapeFieldData data = shapeFieldDatas.get(position);
-                    if (data != null) {
-                        Databases db = new Databases(mContext);
-                        ShapePoint point = ShapePoint.getAllPointsOfAShape(db, data.shapeID);
-                        db.close();
-                        LatLng latLng = plotSHape(point,Color.GREEN, true);
-                        if (latLng != null) {
-                            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 8);
-                            map.animateCamera(cameraUpdate);
-                        }
-                    }
+                    LatLng latLng = getCentroid(data.shapeID);
+                    addMark(latLng);
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng,
+                            AppConstance.zoomLevel);
+                    map.animateCamera(cameraUpdate);
+
                 }
             });
 
@@ -212,11 +275,13 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
     public void setUpSearchLayout() {
         etSearch = (EditText) this.findViewById(R.id.etSearch);
-
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-//                Toast.makeText(mContext,"Add", Toast.LENGTH_LONG).show();
+                if (drawing) {
+                    Toast.makeText(mContext, "Shape is drawing... please wait..", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 addListLayout();
             }
 
@@ -227,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
             @Override
             public void afterTextChanged(Editable s) {
-
+                if (drawing) return;
                 String keyWord = s.toString();
                 if (keyWord.length() > 0) {
                     Databases db = new Databases(mContext);
@@ -242,6 +307,19 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         });
     }
 
+    public ArrayList<LatLng> getLatLangs(String latLangString) {
+
+        ArrayList<LatLng> latLangs = new ArrayList<LatLng>();
+        if(latLangString == null) return latLangs;
+        String[] spiltMain = latLangString.split(":");
+        for(String sub : spiltMain) {
+            String[] splitSub = sub.split(",");
+            double lat = Utility.parseDouble(splitSub[0]);
+            double lon = Utility.parseDouble(splitSub[1]);
+            latLangs.add(new LatLng(lat,lon));
+        }
+        return latLangs;
+    }
 
 
     public LatLng plotSHape(ShapePoint shapePoint, int color, boolean needFill){
@@ -277,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         ArrayList<ShapePoint> points = ShapePoint.getAllPointsOfAShape(db);
         LatLng latLng = null;
         for(ShapePoint point: points) {
-            LatLng tempLatLng = plotSHape(point,Color.RED, false);
+            LatLng tempLatLng = plotSHape(point,AppConstance.COLOR_DEFAULT, false);
             if(tempLatLng != null) latLng = tempLatLng;
         }
         if(latLng != null) {
@@ -288,8 +366,9 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
     public void drawPolygon(PolygonOptions rectOptions, int color, boolean needFill) {
         rectOptions.strokeColor(color).strokeWidth(5);
-        if( needFill ) rectOptions.fillColor(color);
+//        if( needFill ) rectOptions.fillColor(color);
         Polygon polygon = map.addPolygon(rectOptions);
+
         polygon.setClickable(true);
     }
 
@@ -312,6 +391,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
     }
 
     public class DisplayShapesTask extends AsyncTask<Void, ShapePoint, Void> {
+
         boolean flagDrawn = false;
         boolean flagGotoLoc = true;
 
@@ -325,6 +405,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
         @Override
         protected Void doInBackground(Void... params) {
+            drawing = true;
             Databases db = new Databases(mContext);
             ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsShapeID(db);
             for( ShapePoint point : shapePoints) {
@@ -347,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
                 ShapePoint point = values[0];
 //                LOG.log("On Publish","Drawing Polygon:" + point.shapeId);
                 flagDrawn = true;
-                LatLng latLng = plotSHape(point,Color.RED,false);
+                LatLng latLng = plotSHape(point,AppConstance.COLOR_DEFAULT,false);
                 if(flagGotoLoc ==  true) {
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
                     map.animateCamera(cameraUpdate);
@@ -361,6 +442,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
+            drawing = false;
         }
     }
 
@@ -391,7 +473,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         @Override
         protected void onProgressUpdate(Void... values) {
             try{
-                rectOptions.strokeColor(Color.RED).strokeWidth(5);
+                rectOptions.strokeColor(AppConstance.COLOR_DEFAULT).strokeWidth(5);
                 Polygon polygon = map.addPolygon(rectOptions);
             } catch ( Exception e) {
                 e.printStackTrace();
@@ -466,60 +548,6 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         hm.put(fieldName, fieldID);
     }
 
-    public void parseTestPolygons() {
-        int no_of_shape = 2500;
-        int shapeID = 0;
-        double dx = (double) 180/(double) no_of_shape;
-        ArrayList<ShapePoint> shapePoints = new ArrayList<ShapePoint>();
-        Databases db = new Databases(this);
-        ShapeData.wipeData(db);
-        long start  = Calendar.getInstance().getTimeInMillis();
-        LOG.log("Main Activity","Started Time:" + start);
-
-        for( double i = 0; i < 180 ; i += dx) {
-            double x1 = i;
-            double x2 = i + dx;
-            double y1 = 1;
-            double y2 = 2;
-            String shapePointText = "";
-            shapePointText  = shapePointText + x1 + ","+ y1 + ":";
-            shapePointText  = shapePointText + x2 + ","+ y1 + ":";
-            shapePointText  = shapePointText + x2 + ","+ y2 + ":";
-            shapePointText  = shapePointText + x1 + ","+ y2 + ":";
-
-            ShapePoint shapePoint = new ShapePoint();
-            shapePoint.shapeId = shapeID++;
-            shapePoint.filename = shapePointText;
-//            ShapePoint.inseartOperation(db,shapePoint);
-            shapePoints.add(shapePoint);
-            if(shapePoints.size() >= 1000) {
-                ShapePoint.inseartOperation(db,shapePoints);
-                shapePoints = new ArrayList<ShapePoint>();
-                System.gc();
-            }
-
-        }
-//        ShapePoint.inseartOperation(db,shapePoints);
-        long end  = Calendar.getInstance().getTimeInMillis();
-        LOG.log("Main Activity","End Time:" + end);
-        LOG.log("Main Activity","Diff Time:" + (end - start));
-
-
-        start  = Calendar.getInstance().getTimeInMillis();
-        LOG.log("Main Activity","Started Read Operation:" + start);
-        shapePoints =  ShapePoint.getAllPointsOfAShape(db);
-        long pointLength = 0;
-        for(ShapePoint shapePoint : shapePoints) {
-            pointLength = pointLength + shapePoint.filename.length();
-        }
-        end  = Calendar.getInstance().getTimeInMillis();
-        LOG.log("Main Activity","End Time:" + end);
-        LOG.log("Main Activity","Diff Time:" + (end - start));
-        LOG.log("Main Activity","Point Length:" + pointLength);
-
-
-        db.close();
-    }
 
 
     public void parseAndInsertShapeFile(String folderName, String fileName) {
@@ -650,6 +678,8 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         } catch (Exception e) {
             e.printStackTrace();
         }
+        DisplayShapesTask task = new DisplayShapesTask();
+        task.execute();
     }
 
     public void exportDatabse() {

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/rlHolder"
+
+    >
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/card_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        card_view:cardCornerRadius="1dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <TextView
+                android:id="@+id/tvTitle"
+                android:padding="@dimen/ten_dp"
+                android:text="Shape Details"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/color_grey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                />
+            <ImageButton
+                android:id="@+id/imClose"
+                android:layout_width="@dimen/small_button"
+                android:layout_height="@dimen/small_button"
+                android:padding="3dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/blank_xml"
+                android:src="@drawable/ic_close"
+                android:layout_alignParentRight="true"/>
+
+            <ScrollView
+                android:layout_below="@+id/tvTitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <LinearLayout
+                    android:id="@+id/llInfoHolder"
+                    android:layout_marginLeft="@dimen/ten_dp"
+                    android:layout_marginRight="@dimen/ten_dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                </LinearLayout>
+
+            </ScrollView>
+
+
+
+        </RelativeLayout>
+    </android.support.v7.widget.CardView>
+
+</RelativeLayout>

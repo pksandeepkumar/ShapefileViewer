@@ -100,7 +100,7 @@ public class ShapeFieldData {
         ArrayList<ShapeFieldData> objects = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
         String query = "select * from " + TABLE_NAME + "," + ShapeField.TABLE_NAME + "  WHERE "
-                + SHAPE_ID + " = '" + shapeID + "'";
+                + SHAPE_ID + " = '" + shapeID + "' GROUP BY " + FIELD_ID + " , " + ShapeField.FIELD_NAME;
         LOG.log("Query:", "Query:" + query);
         Cursor c = dbRead.rawQuery(query, null);
         if (c.moveToFirst()) {
