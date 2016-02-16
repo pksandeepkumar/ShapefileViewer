@@ -111,9 +111,9 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         }
 
         // Updates the location and zoom of the MapView
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(8.863241001886367,
-                105.04251421185228), 10);
-        map.animateCamera(cameraUpdate);
+//        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(8.863241001886367,
+//                105.04251421185228), 10);
+//        map.animateCamera(cameraUpdate);
         setUpSearchLayout();
 
         map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             llSearchList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    LOG.log("XXXX", "Clicked!!!!!");
+
                     clearListLayout();
                     ShapeFieldData data = shapeFieldDatas.get(position);
                     if (data != null) {
@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
                         db.close();
                         LatLng latLng = plotSHape(point,Color.GREEN, true);
                         if (latLng != null) {
-                            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 12);
+                            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 8);
                             map.animateCamera(cameraUpdate);
                         }
                     }
@@ -269,50 +269,21 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
 
     public void plotSHapes() {
-
         double pointerLat = 0;
         double pointerLon = 0;
         map.clear();
         Databases db = new Databases(mContext);
-
         PolygonOptions rectOptions = new PolygonOptions();
-//        ArrayList<ShapePoint> points = ShapePoint.getAllPointsOfAShape(db);
-//        for( int i = 0 ; i < 1442;i++) {
-            ArrayList<ShapePoint> points = ShapePoint.getAllPointsOfAShape(db);
-
-
-
-            LatLng latLng = null;
-            for(ShapePoint point: points) {
-                LatLng tempLatLng = plotSHape(point,Color.RED, false);
-                if(tempLatLng != null) latLng = tempLatLng;
-//                rectOptions = new PolygonOptions();
-//                Double lat, lon;
-//                String[] spiltMain = point.filename.split(":");
-//                for(String sub : spiltMain) {
-//                    String[] splitSub = sub.split(",");
-//                    lat = Utility.parseDouble(splitSub[0]);
-//                    lon = Utility.parseDouble(splitSub[1]);
-//                    rectOptions.add(new LatLng(lat, lon));
-//                    pointerLat = lat;
-//                    pointerLon = lon;
-//                }
-//                drawPolygon(rectOptions);
-            }
-
-//        }
-
-
-//        ArrayList<ShapeData> shapes = ShapeData.getAllShapes(db);
-//        for( ShapeData shapeData : shapes) {
-//
-//        }
-//        db.close();
+        ArrayList<ShapePoint> points = ShapePoint.getAllPointsOfAShape(db);
+        LatLng latLng = null;
+        for(ShapePoint point: points) {
+            LatLng tempLatLng = plotSHape(point,Color.RED, false);
+            if(tempLatLng != null) latLng = tempLatLng;
+        }
         if(latLng != null) {
             CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
             map.animateCamera(cameraUpdate);
         }
-
     }
 
     public void drawPolygon(PolygonOptions rectOptions, int color, boolean needFill) {
@@ -340,10 +311,9 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         }
     }
 
-    public class DisplayShapesTask extends AsyncTask<Void, Void, Void> {
-
-
-        PolygonOptions rectOptions ;
+    public class DisplayShapesTask extends AsyncTask<Void, ShapePoint, Void> {
+        boolean flagDrawn = false;
+        boolean flagGotoLoc = true;
 
         @Override
         protected void onPreExecute() {
@@ -356,13 +326,14 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         @Override
         protected Void doInBackground(Void... params) {
             Databases db = new Databases(mContext);
-            ArrayList<ShapeData> shapes = ShapeData.getAllShapes(db);
-            for( ShapeData shapeData : shapes) {
-                rectOptions = new PolygonOptions();
-                ShapePoint points = ShapePoint.getAllPointsOfAShape(db, shapeData.id);
-//                rectOptions.add(new LatLng(point.latitude, point.longitude ));
-
-                publishProgress();
+            ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsShapeID(db);
+            for( ShapePoint point : shapePoints) {
+//                LOG.log("doInBackground","Reading a point:" + point.shapeId );
+                point = ShapePoint.getAllPointsOfAShape(db,point.shapeId);
+                if(point ==  null) continue;
+                flagDrawn = false;
+                publishProgress(point);
+                while (!flagDrawn) {}
             }
             db.close();
 
@@ -370,15 +341,21 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         }
 
         @Override
-        protected void onProgressUpdate(Void... values) {
+        protected void onProgressUpdate(ShapePoint... values) {
             try{
-                rectOptions.strokeColor(Color.RED).strokeWidth(5);
-//            Polygon polygon =
-                map.addPolygon(rectOptions);
+
+                ShapePoint point = values[0];
+//                LOG.log("On Publish","Drawing Polygon:" + point.shapeId);
+                flagDrawn = true;
+                LatLng latLng = plotSHape(point,Color.RED,false);
+                if(flagGotoLoc ==  true) {
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
+                    map.animateCamera(cameraUpdate);
+                    flagGotoLoc = false;
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
         }
 
         @Override
@@ -468,7 +445,9 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_settings) {
-            plotSHapes();
+//            plotSHapes();
+            DisplayShapesTask task = new DisplayShapesTask();
+            task.execute();
             return true;
         }
         return super.onOptionsItemSelected(item);

@@ -125,6 +125,25 @@ public class ShapePoint {
         return items;
     }
 
+    public static ArrayList<ShapePoint> getAllPointsShapeID(Databases db) {
+        ArrayList<ShapePoint> items = new ArrayList<ShapePoint>();
+        ShapePoint instance = null;
+        SQLiteDatabase dbRead = db.getReadableDatabase();
+        String query = "select " + ID_SHAPE + " from " + TABLE_NAME ;
+        if(AppConstance.D) LOG.log("Query:", "Query:" + query);
+        Cursor c = dbRead.rawQuery(query, null);
+        if (c.moveToFirst()) {
+            do {
+                instance = new ShapePoint();
+                instance.shapeId = c.getInt(c.getColumnIndex(ID_SHAPE));
+                items.add(instance);
+            } while ( c.moveToNext()) ;
+        }
+        c.close();
+        dbRead.close();
+        return items;
+    }
+
     public static boolean deleteTable(Databases db) {
         try {
             SQLiteDatabase sql = db.getWritableDatabase();
