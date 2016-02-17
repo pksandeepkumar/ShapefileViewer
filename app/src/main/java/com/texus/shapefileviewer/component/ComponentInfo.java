@@ -58,7 +58,7 @@ public class ComponentInfo extends RelativeLayout {
         imClose.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.removeAddInfoWindow();
+                MainActivity.removeInfoWindow();
             }
         });
 

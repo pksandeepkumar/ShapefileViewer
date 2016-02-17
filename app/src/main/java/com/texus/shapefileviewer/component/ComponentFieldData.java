@@ -10,7 +10,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.texus.shapefileviewer.R;
+import com.texus.shapefileviewer.datamodel.ShapeField;
 import com.texus.shapefileviewer.datamodel.ShapeFieldData;
+import com.texus.shapefileviewer.db.Databases;
 
 public class ComponentFieldData extends RelativeLayout {
 
@@ -48,7 +50,12 @@ public class ComponentFieldData extends RelativeLayout {
         tvFieldName = (TextView) child.findViewById(R.id.tvFieldName);
         tvFieldData = (TextView) child.findViewById(R.id.tvFieldData);
         if(shapeFieldData != null) {
-            tvFieldName.setText(shapeFieldData.fieldName);
+            Databases db = new Databases(context);
+            ShapeField field = ShapeField.getAnObject(db, shapeFieldData.fieldID);
+            db.close();
+            if(field != null) {
+                tvFieldName.setText(field.fieldName);
+            }
             tvFieldData.setText(shapeFieldData.fieldData);
         }
 	}

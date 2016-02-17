@@ -40,7 +40,7 @@ public class ShapeField {
         String query = "";
         query = "insert into " + TABLE_NAME + " ("
                 + FIELD_NAME + " ) values ( "
-                + "'" + instance.fieldName + "');";
+                + "'" + instance.fieldName.replaceAll("'","\'") + "');";
         LOG.log("Query:", "Query:" + query);
         sql.execSQL(query);
         return getID(db);
@@ -65,7 +65,7 @@ public class ShapeField {
         ShapeField instance = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
         String query = "select * from " + TABLE_NAME + " WHERE "
-                + FIELD_NAME + " = '" + fieldName + "'";
+                + FIELD_NAME + " = '" + fieldName.replaceAll("'","\'") + "'";
         LOG.log("Query:", "Query:" + query);
         Cursor c = dbRead.rawQuery(query, null);
         if (c.moveToFirst()) {

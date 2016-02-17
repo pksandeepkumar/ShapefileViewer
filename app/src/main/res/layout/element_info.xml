@@ -30,7 +30,7 @@
                 android:id="@+id/imClose"
                 android:layout_width="@dimen/small_button"
                 android:layout_height="@dimen/small_button"
-                android:padding="3dp"
+                android:padding="5dp"
                 android:layout_margin="5dp"
                 android:background="@drawable/blank_xml"
                 android:src="@drawable/ic_close"

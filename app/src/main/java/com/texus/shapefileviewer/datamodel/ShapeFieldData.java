@@ -15,17 +15,20 @@ public class ShapeFieldData {
 
     public static final String TABLE_NAME = "TableShapeFieldData";
 
+    public static final String ID = "field_data_ID";
     public static final String SHAPE_ID = "ShapeID";
     public static final String FIELD_ID = "FieldID";
     public static final String FIELD_DATA = "FieldData";
 
+    public int id;
     public int shapeID;
     public int fieldID;
     public String fieldName;
     public String fieldData;
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
-            + " ( " + SHAPE_ID + " INTEGER , "
+            + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
+            + SHAPE_ID + " INTEGER , "
             + FIELD_ID + " INTEGER , "
             + FIELD_DATA + " TEXT );";
 
@@ -50,7 +53,7 @@ public class ShapeFieldData {
                 + FIELD_DATA + ","
                 + SHAPE_ID + " ) values ( "
                 + "" + instance.fieldID + ","
-                + "'" + instance.fieldData + "',"
+                + "'" + instance.fieldData.replaceAll("'","\'") + "',"
                 + "" + instance.shapeID + ");";
         LOG.log("Query:", "Query:" + query);
         sql.execSQL(query);
@@ -66,7 +69,7 @@ public class ShapeFieldData {
                     + FIELD_DATA + ","
                     + SHAPE_ID + " ) values ( "
                     + "" + object.fieldID + ","
-                    + "'" + object.fieldData + "',"
+                    + "'" + object.fieldData.replaceAll("'","\'") + "',"
                     + "" + object.shapeID + ");";
             LOG.log("Query:", "Query:" + query);
             sql.execSQL(query);
@@ -99,8 +102,10 @@ public class ShapeFieldData {
     public static ArrayList<ShapeFieldData> getAllFieldDataForAShape(Databases db, int shapeID) {
         ArrayList<ShapeFieldData> objects = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
-        String query = "select * from " + TABLE_NAME + "," + ShapeField.TABLE_NAME + "  WHERE "
-                + SHAPE_ID + " = '" + shapeID + "' GROUP BY " + FIELD_ID + " , " + ShapeField.FIELD_NAME;
+//        String query = "select DISTINCT  from " + TABLE_NAME + "," + ShapeField.TABLE_NAME + "  WHERE "
+//                + SHAPE_ID + " = '" + shapeID + "' " ;
+        String query = "select *  from " + TABLE_NAME  + "  WHERE "
+                + SHAPE_ID + " = '" + shapeID + "' " ;
         LOG.log("Query:", "Query:" + query);
         Cursor c = dbRead.rawQuery(query, null);
         if (c.moveToFirst()) {
@@ -109,7 +114,7 @@ public class ShapeFieldData {
                 ShapeFieldData instance = new ShapeFieldData();
                 instance.shapeID = c.getInt(c.getColumnIndex(SHAPE_ID));
                 instance.fieldID = c.getInt(c.getColumnIndex(FIELD_ID));
-                instance.fieldName = c.getString(c.getColumnIndex(ShapeField.FIELD_NAME));
+//                instance.fieldName = c.getString(c.getColumnIndex(ShapeField.FIELD_NAME));
                 instance.fieldData = c.getString(c.getColumnIndex(FIELD_DATA));
                 objects.add(instance);
             } while (c.moveToNext());
