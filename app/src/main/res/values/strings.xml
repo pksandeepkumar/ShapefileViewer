@@ -2,4 +2,8 @@
     <string name="app_name">Shapefile Viewer</string>
     <string name="action_settings">Settings</string>
     <string name="map_api_key">AIzaSyCtXDunyONIX7jMD1rtfJHl3H-qMtaoj7g</string>
+
+
+    <string name="map_api_key_release_key">AIzaSyCrY-OOGg8ABzipz1j0XciZz709ym-mjZE</string>
+    <string name="map_api_key_debug_key">AIzaSyCtXDunyONIX7jMD1rtfJHl3H-qMtaoj7g</string>
 </resources>

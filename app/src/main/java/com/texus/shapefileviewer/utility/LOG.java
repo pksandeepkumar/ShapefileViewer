@@ -26,4 +26,7 @@ public class LOG {
 		Log.e(tag, msg);
 	}
 
+
+
+
 }
