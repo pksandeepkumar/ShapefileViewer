@@ -51,6 +51,7 @@ import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shp.shapeTypes.Sh
 import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shp.shapeTypes.ShpShape;
 import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shx.SHX_File;
 import com.texus.shapefileviewer.shape.diewald_shapeFile.shapeFile.ShapeFile;
+import com.texus.shapefileviewer.task.JsonMapDataParseTask;
 import com.texus.shapefileviewer.utility.LOG;
 import com.texus.shapefileviewer.utility.Utility;
 
@@ -81,6 +82,8 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
     private FieldDataAdapter          adapter;
     private ArrayList<ShapeFieldData> shapeFieldDatas;
+
+    private  DisplayShapesTask displayShapesTask = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,9 +127,17 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
         hideSoftKeyboard();
 
-        DisplayShapesTask task = new DisplayShapesTask();
+//        if(displayShapesTask == null) {
+//            displayShapesTask = new DisplayShapesTask();
+//            displayShapesTask.execute();
+//        }
+
+        JsonMapDataParseTask task = new JsonMapDataParseTask();
         task.execute();
+
     }
+
+
 
     public int getPolygonID(Polygon polygon) {
         return Utility.parseInt(polygon.getId().replaceAll("pg","").trim());
@@ -137,6 +148,14 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         int shapeID = getPolygonID(polygon);
         addMark(getCentroid(shapeID));
         addInfoWindow(shapeID);
+    }
+
+    @Override
+    public void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if(displayShapesTask != null) displayShapesTask.cancel(true);
+        Toast.makeText(this,"On Detached Window called", Toast.LENGTH_LONG).show();
+        LOG.log("onDetachedFromWindow", "onDetachedFromWindow");
     }
 
     public LatLng getCentroid(int shapeId) {
@@ -291,6 +310,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
                 lat = Utility.parseDouble(splitSub[0]);
                 lon = Utility.parseDouble(splitSub[1]);
                 rectOptions.add(new LatLng(lat, lon));
+//                LOG.log("plotSHape", "Added lat lon:" + lat + ":" + lon);
             }
             LatLng point = new LatLng(lat,lon );
             drawPolygon(rectOptions, color, needFill);
@@ -387,18 +407,46 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
         @Override
         protected Void doInBackground(Void... params) {
+//            drawing = true;
+//            Databases db = new Databases(mContext);
+//            //Read shape id only, because reading all point may cause outof memmory erros, to avoid
+//            // this we read each point string and plot
+//            ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsShapeID(db);
+//            LOG.log("doInBackground","shapePoints Size:" + shapePoints.size() );
+//            for( ShapePoint point : shapePoints) {
+//                LOG.log("doInBackground","Reading a point:" + point.shapeId );
+//                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
+//                //Read all points
+//                point = ShapePoint.getAllPointsOfAShape(db,point.shapeId);
+//                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
+//                if(point ==  null) continue;
+//                flagDrawn = false;
+//                publishProgress(point);
+//                while (!flagDrawn) {}
+//            }
+//            db.close();
+
+
             drawing = true;
             Databases db = new Databases(mContext);
-            ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsShapeID(db);
+            //Read shape id only, because reading all point may cause outof memmory erros, to avoid
+            // this we read each point string and plot
+            ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsOfAShape(db);
+            LOG.log("doInBackground","shapePoints Size:" + shapePoints.size() );
             for( ShapePoint point : shapePoints) {
-//                LOG.log("doInBackground","Reading a point:" + point.shapeId );
-                point = ShapePoint.getAllPointsOfAShape(db,point.shapeId);
+                LOG.log("doInBackground","Reading a point:" + point.shapeId );
+                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
+                //Read all points
+//                point = ShapePoint.getAllPointsOfAShape(db,point.shapeId);
+                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
                 if(point ==  null) continue;
                 flagDrawn = false;
                 publishProgress(point);
                 while (!flagDrawn) {}
             }
             db.close();
+
+
 
             return null;
         }
@@ -465,6 +513,12 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             super.onPostExecute(result);
             dialog.dismiss();
             exportDatabse();
+
+            if(displayShapesTask != null) {
+                displayShapesTask = new DisplayShapesTask();
+                displayShapesTask.execute();
+            }
+
         }
     }
 
@@ -506,10 +560,12 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
+
         if (id == R.id.action_settings) {
+            exportDatabse();
 //            plotSHapes();
-            DisplayShapesTask task = new DisplayShapesTask();
-            task.execute();
+//            DisplayShapesTask task = new DisplayShapesTask();
+//            task.execute();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -552,13 +608,15 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             int number_of_shapes = shapefile.getSHP_shapeCount();
             int number_of_fields = shapefile.getDBF_fieldCount();
 
+
+
             Databases db = new Databases(mContext);
             ShapeData.wipeData(db);
             ArrayList<ShapeData> shapeDatas = new ArrayList<ShapeData>();
             ArrayList<ShapePoint> shapePoints = new ArrayList<ShapePoint>();
             ArrayList<ShapeFieldData> shapeFieldDatas = new ArrayList<ShapeFieldData>();
             int primaryKeyID = 0;
-            for(int i = 0; i <  number_of_shapes; i++){
+            for(int i = 0; i < 1 /*number_of_shapes */; i++){
                 ShpPolygon shape    = shapefile.getSHP_shape(i);
                 int shapeID = primaryKeyID++;
                 double[][] points =  shape.getPoints();
@@ -622,8 +680,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         } catch (Exception e) {
             e.printStackTrace();
         }
-        DisplayShapesTask task = new DisplayShapesTask();
-        task.execute();
+
     }
 
     public void exportDatabse() {
