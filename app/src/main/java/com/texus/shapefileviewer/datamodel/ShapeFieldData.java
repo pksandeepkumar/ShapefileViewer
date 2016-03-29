@@ -7,6 +7,7 @@ import com.texus.shapefileviewer.db.Databases;
 import com.texus.shapefileviewer.utility.LOG;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by sandeep on 8/2/16.
@@ -20,11 +21,30 @@ public class ShapeFieldData {
     public static final String FIELD_ID = "FieldID";
     public static final String FIELD_DATA = "FieldData";
 
+    public static HashMap<String,Long> fieldIdMap = null;
+
     public int id;
     public int shapeID;
     public int fieldID;
     public String fieldName;
     public String fieldData;
+
+    public static long getIdOfFieldName(String fieldName) {
+        if(fieldIdMap == null) {
+            fieldIdMap = new HashMap<>();
+        }
+
+        Long id = fieldIdMap.get(fieldName);
+        if(id != null) {
+           return id;
+        } else {
+            ShapeField field = new ShapeField();
+            field.fieldName = fieldName;
+            ShapeField
+        }
+
+
+    }
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
             + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "

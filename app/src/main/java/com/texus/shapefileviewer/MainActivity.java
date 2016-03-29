@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 //            displayShapesTask.execute();
 //        }
 
-        JsonMapDataParseTask task = new JsonMapDataParseTask();
+        JsonMapDataParseTask task = new JsonMapDataParseTask(this);
         task.execute();
 
     }
@@ -294,6 +294,34 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             latLangs.add(new LatLng(lat,lon));
         }
         return latLangs;
+    }
+
+
+
+    public synchronized void plotShape( ArrayList<LatLng> latLngs) {
+        PolygonOptions rectOptions = new PolygonOptions();
+
+//        Iterator<LatLng> iter = latLngs.iterator();
+
+//        while (iter.hasNext()) {
+//
+//            LatLng str = iter.next();
+//            rectOptions.add(str);
+//
+//        }
+
+        try {
+            for( LatLng latLng : latLngs) {
+
+                rectOptions.add(latLng);
+            }
+        } catch ( Exception e) {
+            e.printStackTrace();;
+        }
+
+
+        drawPolygon(rectOptions, Color.RED, true);
+
     }
 
 

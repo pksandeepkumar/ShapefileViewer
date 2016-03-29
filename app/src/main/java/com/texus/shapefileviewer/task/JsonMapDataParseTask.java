@@ -4,23 +4,35 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.texus.shapefileviewer.MainActivity;
+import com.texus.shapefileviewer.datamodel.ShapeData;
+import com.texus.shapefileviewer.db.Databases;
+
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by sandeep on 21/3/16.
  */
 public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
 
+    MainActivity mainActivity = null;
+    ArrayList<LatLng> latLngs = null;
+
     @Override
     protected void onPreExecute() {
         super.onPreExecute();
     }
 
-    public JsonMapDataParseTask() {
+    public JsonMapDataParseTask( MainActivity mainActivity ) {
+        this.mainActivity = mainActivity;
+        latLngs = new ArrayList<LatLng>();
     }
 
     @Override
@@ -32,6 +44,10 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
             /*** read from file ***/
             String jsonFileName = Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator
                     + "jsons" + File.separator + "landparcel_vietnam.json";
+
+//            String jsonFileName = Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator
+//                    + "jsons" + File.separator + "one_parcel.json";
+
 
             Log.e("JSON Parsing","Field jsonFileName:" + jsonFileName);
             JsonParser jParser = jfactory.createJsonParser(new File(jsonFileName));
@@ -52,16 +68,23 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
             Log.e("JSON Parsing", "-------------------------------------");
             Log.e("JSON Parsing", "-------------------------------------");
             Log.e("JSON Parsing", "-------------------------------------");
+            ShapeData shapeData = new ShapeData();
+            Databases db = new Databases(mainActivity);
+            shapeData.id = ShapeData.getID(db);
+            ShapeData.inseartOperation(db,shapeData);
+
             while (jParser.nextToken() != JsonToken.END_OBJECT) {
 //                Log.e("JSON Parsing","jParser.nextToken():" + jParser.getCurrentToken());
 //                Log.e("JSON Parsing","jParser.getText():" + jParser.getText());
                 if( jParser.getCurrentToken() == JsonToken.FIELD_NAME) {
                     String fetchedValue = jParser.getCurrentName();
+
                     if("type".equals(fetchedValue)) {
                         Log.e("JSON Parsing", "Attribute:" + fetchedValue);
                         jParser.nextToken();
                         if( jParser.getCurrentToken() == JsonToken.VALUE_STRING) {
                             fetchedValue = jParser.getText();
+                            shapeData.shapeType = fetchedValue;
                             Log.e("JSON Parsing","Value:" + fetchedValue);
                         }
                     }
@@ -71,44 +94,115 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
                         jParser.nextToken();
                         Log.e("JSON Parsing", "Text:" + jParser.getText());
                         if(jParser.getCurrentToken()== JsonToken.START_ARRAY) {
-                            while(jParser.getCurrentToken() != JsonToken.END_ARRAY) {
-                                jParser.nextToken();
-                                Log.e("JSON Parsing", "Text:" + jParser.getText());
+                            while(jParser.nextToken() != JsonToken.END_ARRAY) {
+                                ;
+//                                Log.e("JSON Parsing", "Text:" + jParser.getText());
                                 if( jParser.getCurrentToken() ==  JsonToken.START_OBJECT) {
-                                    jParser.nextToken();
-                                    while(jParser.getCurrentToken() != JsonToken.END_OBJECT) {
-                                        jParser.nextToken();
-                                        Log.e("JSON Parsing", "Text:" + jParser.getText());
-                                        if( jParser.getCurrentToken().equals("FIELD_NAME")) {
+//                                    jParser.nextToken();
+//                                    Log.e("JSON Parsing", "Text:" + jParser.getText());
+
+
+
+                                    while(jParser.nextToken() != JsonToken.END_OBJECT) {
+
+//                                        Log.e("JSON Parsing", "Text Type:" + jParser.getCurrentToken());
+//                                        Log.e("JSON Parsing", "Text:" + jParser.getText());
+                                        if( jParser.getCurrentToken() == JsonToken.FIELD_NAME) {
                                             fetchedValue = jParser.getText();
+
+//                                            Log.e("JSON Parsing", "Text:" + fetchedValue);
+
+
                                             if("type".equals(fetchedValue)) {
-                                                Log.e("JSON Parsing","Attribute:" + fetchedValue);
+//                                                Log.e("JSON Parsing","Attribute:" + fetchedValue);
                                                 jParser.nextToken();
                                                 fetchedValue = jParser.getText();
-                                                Log.e("JSON Parsing","Value:" + fetchedValue);
+//                                                Log.e("JSON Parsing","Value:" + fetchedValue);
+                                                continue;
                                             }
 
                                             if("properties".equals(fetchedValue)) {
-                                                Log.e("JSON Parsing", "Attribute:" + fetchedValue);
+//                                                Log.e("JSON Parsing", "Attribute:" + fetchedValue);
                                                 jParser.nextToken();
-                                                if( jParser.getCurrentToken().equals("START_OBJECT")) {
-                                                    while(!jParser.getCurrentToken().equals("END_OBJECT")) {
-                                                        jParser.nextToken();
-                                                        if( jParser.getCurrentToken().equals("FIELD_NAME")) {
-                                                            fetchedValue = jParser.getText();
-                                                            Log.e("JSON Parsing","Attributes:" + fetchedValue);
-                                                            fetchedValue = jParser.getText();
-                                                            Log.e("JSON Parsing","Value:" + fetchedValue);
+                                                if( jParser.getCurrentToken() ==  JsonToken.START_OBJECT) {
+
+                                                    HashMap<String,String> fieldAndValues = new HashMap<>();
+                                                    while(jParser.nextToken() != JsonToken.END_OBJECT) {
+                                                        ;
+//                                                        Log.e("JSON Parsing", "properties Text:" + jParser.getText());
+                                                        if( jParser.getCurrentToken()== JsonToken.FIELD_NAME) {
+
+                                                            String fieldName = jParser.getText();
+//                                                            Log.e("JSON Parsing","properties Attributes:" + fetchedValue);
+                                                            jParser.nextToken();
+                                                            String fieldValue = jParser.getText();
+//                                                            Log.e("JSON Parsing","properties Value:" + fetchedValue);
+                                                            fieldAndValues.put(fieldName,fieldValue);
                                                         }
                                                     }
 
+//                                                    Log.e("JSON Parsing", "While End:" + jParser.getText());
                                                 }
+                                                continue;
+                                            }
+
+//                                            Log.e("JSON Parsing", "Value End:" + jParser.getText());
+//                                            jParser.nextToken();
+
+                                            if("geometry".equals(fetchedValue)) {
+//                                                Log.e("JSON Parsing", "Attribute:" + fetchedValue);
+                                                jParser.nextToken();
+                                                if( jParser.getCurrentToken()==  JsonToken.START_OBJECT) {
+                                                    while(jParser.nextToken()!= JsonToken.END_OBJECT) {
+//                                                        Log.e("JSON Parsing", "Geometry:" + jParser.getText());
+//                                                        Log.e("JSON Parsing", "Geometry:" + jParser.getCurrentToken());
+                                                        if( jParser.getCurrentToken() == JsonToken.FIELD_NAME) {
+                                                            fetchedValue = jParser.getText();
+//                                                            Log.e("JSON Parsing", "Geometry:" + jParser.getText());
+                                                            if("type".equals(fetchedValue)) {
+//                                                                Log.e("JSON Parsing","Attribute:" + fetchedValue);
+                                                                jParser.nextToken();
+                                                                fetchedValue = jParser.getText();
+//                                                                Log.e("JSON Parsing","Value:" + fetchedValue);
+                                                            } else
+
+                                                            if("coordinates".equals(fetchedValue)) {
+//                                                                Log.e("JSON Parsing","Attribute:" + fetchedValue);
+                                                                jParser.nextToken();
+                                                                if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
+                                                                    while(jParser.nextToken() != JsonToken.END_ARRAY) {
+
+                                                                        if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
+                                                                            latLngs = new ArrayList<LatLng>();
+                                                                            while(jParser.nextToken() != JsonToken.END_ARRAY) {
+
+                                                                                if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
+                                                                                    jParser.nextToken();
+
+                                                                                    double latitiude = jParser.getDoubleValue();
+//                                                                                    Log.e("JSON Parsing", "Latitude:" + latitiude);
+                                                                                    jParser.nextToken();
+                                                                                    double longitude = jParser.getDoubleValue();
+//                                                                                    Log.e("JSON Parsing", "Longitude:" + longitude);
+//                                                                                    latLngs.add(new LatLng(latitiude,longitude));
+                                                                                    latLngs.add(new LatLng(longitude,latitiude));
+                                                                                    jParser.nextToken();
+
+                                                                                }
+                                                                            }
+                                                                            publishProgress();
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                continue;
                                             }
                                         }
                                     }
-
                                 }
-
                             }
                         }
                     }
@@ -132,7 +226,19 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
     }
 
     @Override
+    protected void onProgressUpdate(Void... values) {
+        super.onProgressUpdate(values);
+        if(mainActivity != null) {
+            mainActivity.plotShape((ArrayList<LatLng>)latLngs.clone());
+            Log.e("PUBLISH", "_______________________________________________");
+            Log.e("PUBLISH","_______________________________________________");
+        }
+    }
+
+    @Override
     protected void onPostExecute(Void result) {
         super.onPostExecute(result);
+
+//        mainActivity.plotShape(latLngs);
     }
 }

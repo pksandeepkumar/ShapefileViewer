@@ -16,19 +16,22 @@ public class ShapePoint {
 
     public static final String TABLE_NAME = "TableShapePoints";
 
+    public static final String ID = "_id";
     public static final String ID_SHAPE = "ShapeId";
-    public static final String LATITUDE = "Latitiude";
+    public static final String LATITUDE = "Latitude";
     public static final String LONGITUDE = "Longitude";
-    public static final String FILE_NAME = "FileName";
+    public static final String FILE_NAME_OR_POINTS = "FileNameOrPoints";
 
+    public int id;
     public int shapeId;
     public double latitude;
     public double longitude;
     public String filename;
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
-            + " ( " + ID_SHAPE + " INTEGER , "
-            + FILE_NAME + " TEXT , "
+            + " (  " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
+            + ID_SHAPE + " INTEGER , "
+            + FILE_NAME_OR_POINTS + " TEXT , "
             + LATITUDE + " REAL , "
             + LONGITUDE + " REAL );";
 
@@ -36,8 +39,9 @@ public class ShapePoint {
         ShapePoint instance = null;
         if( c != null) {
             instance = new ShapePoint();
+            instance.id = c.getInt(c.getColumnIndex(ID));
             instance.shapeId = c.getInt(c.getColumnIndex(ID_SHAPE));
-            instance.filename = c.getString(c.getColumnIndex(FILE_NAME));
+            instance.filename = c.getString(c.getColumnIndex(FILE_NAME_OR_POINTS));
             instance.latitude = c.getDouble(c.getColumnIndex(LATITUDE));
             instance.longitude = c.getDouble(c.getColumnIndex(LONGITUDE));
         } else {
@@ -51,7 +55,7 @@ public class ShapePoint {
         String query = "";
         query = "insert into " + TABLE_NAME + " ("
                 + ID_SHAPE + ","
-                + FILE_NAME + ","
+                + FILE_NAME_OR_POINTS + ","
                 + LATITUDE + ","
                 + LONGITUDE + " ) values ( "
                 + "" + instance.shapeId + ","
@@ -69,7 +73,7 @@ public class ShapePoint {
         for(ShapePoint instance: objects) {
             query = "insert into " + TABLE_NAME + " ("
                     + ID_SHAPE + ","
-                    + FILE_NAME + ","
+                    + FILE_NAME_OR_POINTS + ","
                     + LATITUDE + ","
                     + LONGITUDE + " ) values ( "
                     + "" + instance.shapeId + ","

@@ -1,5 +1,6 @@
 package com.texus.shapefileviewer.datamodel;
 
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -16,27 +17,30 @@ public class ShapeData {
 
     public static final String ID = "id";
     public static final String SHAPE_NAME = "ShapeName";
+    public static final String SHAPE_TYPE = "ShapeType";
 
     public int id;
     public String shapeName;
+    public String shapeType;
+
+
 
     ArrayList<ShapePoint> points  = new ArrayList<ShapePoint>();
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
             + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
+            + SHAPE_TYPE + " VARCHAR(100),"
             + SHAPE_NAME + " TEXT );";
 
 
-    public static int inseartOperation( Databases db , ShapeData shapeData) {
+    public static long inseartOperation( Databases db , ShapeData shapeData) {
         SQLiteDatabase sql = db.getWritableDatabase();
-        String query = "";
-        query = "insert into " + TABLE_NAME + " ("
-                + SHAPE_NAME + " ) values ( "
-                + "'" + shapeData.shapeName + "');";
-        LOG.log("Query:", "Query:" + query);
-        sql.execSQL(query);
+        ContentValues insertValues = new ContentValues();
+        insertValues.put(SHAPE_TYPE, shapeData.shapeType);
+        insertValues.put(SHAPE_NAME, shapeData.shapeName);
+        long id = sql.insert(TABLE_NAME, null, insertValues);
         sql.close();
-        return getID(db);
+        return id;
     }
 
     public static int inseartOperation( Databases db , ArrayList<ShapeData> objects) {
@@ -45,8 +49,10 @@ public class ShapeData {
         for(ShapeData object: objects) {
             query = "insert into " + TABLE_NAME + " ("
                     + ID + ","
+                    + SHAPE_TYPE + " , "
                     + SHAPE_NAME + " ) values ( "
                     + "" + object.id + ","
+                    + "'" + object.shapeType + "',"
                     + "'" + object.shapeName + "');";
             LOG.log("Query:", "Query:" + query);
             sql.execSQL(query);
@@ -80,6 +86,7 @@ public class ShapeData {
             do {
                 instance = new ShapeData();
                 instance.id = c.getInt(c.getColumnIndex(ID));
+                instance.shapeType = c.getString(c.getColumnIndex(SHAPE_TYPE));
                 instance.shapeName = c.getString(c.getColumnIndex(SHAPE_NAME));
                 items.add(instance);
             } while ( c.moveToNext()) ;
