@@ -65,7 +65,7 @@ public class ComponentInfo extends RelativeLayout {
 
 	}
 
-	public void setValues( int shapeID) {
+	public void setValues( long shapeID) {
         Databases db = new Databases(mContext);
         ArrayList<ShapeFieldData> fieldDatas = ShapeFieldData.getAllFieldDataForAShape(db, shapeID);
         for(ShapeFieldData shapeFieldData : fieldDatas) {

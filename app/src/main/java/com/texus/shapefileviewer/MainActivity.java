@@ -101,7 +101,8 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                openFileChooserDialog();
+                exportDatabse();
+//                openFileChooserDialog();
             }
         });
 
@@ -132,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 //            displayShapesTask.execute();
 //        }
 
-        JsonMapDataParseTask task = new JsonMapDataParseTask(this);
+        JsonMapDataParseTask task = new JsonMapDataParseTask(this,this);
         task.execute();
 
     }
@@ -158,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         LOG.log("onDetachedFromWindow", "onDetachedFromWindow");
     }
 
-    public LatLng getCentroid(int shapeId) {
+    public LatLng getCentroid(long shapeId) {
         ShapePoint point = getAShapePoint(shapeId);
         ArrayList<LatLng> latLngs = getLatLangs(point.filename);
         double x = 0.;
@@ -178,14 +179,14 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         marker = map.addMarker(new MarkerOptions() .position(latLng) .title("Selected Area"));
     }
 
-    public ShapePoint getAShapePoint(int shapeID) {
+    public ShapePoint getAShapePoint(long shapeID) {
         Databases db = new Databases(mContext);
         ShapePoint point = getAShapePoint(db, shapeID);
         db.close();
         return  point;
     }
 
-    public ShapePoint getAShapePoint(Databases db, int shapeID) {
+    public ShapePoint getAShapePoint(Databases db, long shapeID) {
         return ShapePoint.getAllPointsOfAShape(db, shapeID);
     }
     public void addListLayout() {
@@ -208,7 +209,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         llSearchList.setAdapter(adapter);
     }
 
-    public void addInfoWindow(int shapeId) {
+    public void addInfoWindow(long shapeId) {
         if(llPopupLayout.getChildCount() != 0) return;
         llPopupLayout.setGravity(Gravity.CENTER | Gravity.BOTTOM);
         ComponentInfo componentInfo = new ComponentInfo(mContext,llPopupLayout.getHeight());
@@ -607,7 +608,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         return val;
     }
 
-    public void insertFieldName(String fieldName, int fieldID) {
+    public void insertFieldName(String fieldName, long fieldID) {
        if(hm == null) return;
         hm.put(fieldName, fieldID);
     }
@@ -679,11 +680,11 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
                     String data = shape_info[j].trim();
                     DBF_Field field = shapefile.getDBF_field(j);
                     String field_name = field.getName();
-                    int fieldID = getFiledNameId(field_name);
+                    long fieldID = getFiledNameId(field_name);
                     if(fieldID == -1) {
                         ShapeField shapeField = new ShapeField();
                         shapeField.fieldName = field_name;
-                        fieldID = ShapeField.inseartOperation(db,shapeField);
+                        fieldID = ShapeField.insertOperation(db,shapeField);
                         insertFieldName(field_name,fieldID);
                     }
 
@@ -693,18 +694,18 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
                     fieldData.fieldData = data;
                     shapeFieldDatas.add(fieldData);
                     if(shapeFieldDatas.size() >= 100) {
-                        ShapeFieldData.inseartOperation(db, shapeFieldDatas);
+                        ShapeFieldData.insertOperation(db, shapeFieldDatas);
                         shapeFieldDatas = new ArrayList<ShapeFieldData>();
                     }
-//                    ShapeFieldData.inseartOperation(db, fieldData);
+//                    ShapeFieldData.insertOperation(db, fieldData);
 
                     System.out.printf("  (dbase-info) [%d] %s = %s", j, field_name, data);
                 }
                 System.out.printf("\n");
             }
-//            ShapeData.inseartOperation(db,shapeDatas);
+//            ShapeData.insertOperation(db,shapeDatas);
             ShapePoint.inseartOperation(db,shapePoints);
-            ShapeFieldData.inseartOperation(db, shapeFieldDatas);
+            ShapeFieldData.insertOperation(db, shapeFieldDatas);
         } catch (Exception e) {
             e.printStackTrace();
         }

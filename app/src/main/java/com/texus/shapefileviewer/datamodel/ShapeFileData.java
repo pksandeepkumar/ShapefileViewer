@@ -12,16 +12,18 @@ import java.util.ArrayList;
 /**
  * Created by sandeep on 8/2/16.
  */
-public class ShapeData {
+public class ShapeFileData {
     public static final String TABLE_NAME = "TableShapeData";
 
     public static final String ID = "id";
-    public static final String SHAPE_NAME = "ShapeName";
-    public static final String SHAPE_TYPE = "ShapeType";
+    public static final String SHAPE_FILE_NAME = "ShapeFileName";
+    public static final String SHAPE_FILE_PATH = "ShapeFilePath";
+    public static final String NO_OF_SHAPES = "NoOfShapes";
 
-    public int id;
+    public long id;
     public String shapeName;
     public String shapeType;
+    public int noOfShapes;
 
 
 
@@ -29,36 +31,34 @@ public class ShapeData {
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
             + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
-            + SHAPE_TYPE + " VARCHAR(100),"
-            + SHAPE_NAME + " TEXT );";
+            + SHAPE_FILE_PATH + " TEXT,"
+            + NO_OF_SHAPES + " INTEGER,"
+            + SHAPE_FILE_NAME + " TEXT );";
 
 
-    public static long inseartOperation( Databases db , ShapeData shapeData) {
+    public static long insertOperation( Databases db , ShapeFileData shapeData) {
         SQLiteDatabase sql = db.getWritableDatabase();
-        ContentValues insertValues = new ContentValues();
-        insertValues.put(SHAPE_TYPE, shapeData.shapeType);
-        insertValues.put(SHAPE_NAME, shapeData.shapeName);
-//        long id = sql.insert(TABLE_NAME, null, insertValues);
-        long id = 1;
+        long id = insertOperation(sql, shapeData);
         sql.close();
         return id;
     }
 
-    public static int inseartOperation( Databases db , ArrayList<ShapeData> objects) {
+    public static long insertOperation( SQLiteDatabase sql,ShapeFileData shapeData ) {
+        ContentValues insertValues = new ContentValues();
+        insertValues.put(SHAPE_FILE_PATH, shapeData.shapeType);
+        insertValues.put(SHAPE_FILE_NAME, shapeData.shapeName);
+        insertValues.put(NO_OF_SHAPES, shapeData.noOfShapes);
+        long id = sql.insert(TABLE_NAME, null, insertValues);
+        return id;
+    }
+
+
+    public static int inseartOperation( Databases db , ArrayList<ShapeFileData> objects) {
         SQLiteDatabase sql = db.getWritableDatabase();
         String query = "";
-        for(ShapeData object: objects) {
-            query = "insert into " + TABLE_NAME + " ("
-                    + ID + ","
-                    + SHAPE_TYPE + " , "
-                    + SHAPE_NAME + " ) values ( "
-                    + "" + object.id + ","
-                    + "'" + object.shapeType + "',"
-                    + "'" + object.shapeName + "');";
-            LOG.log("Query:", "Query:" + query);
-            sql.execSQL(query);
+        for(ShapeFileData object: objects) {
+            long id = insertOperation(sql, object);
         }
-
         sql.close();
         return getID(db);
     }
@@ -76,19 +76,19 @@ public class ShapeData {
         }
     }
 
-    public static ArrayList<ShapeData> getAllShapes(Databases db) {
-        ArrayList<ShapeData> items = new ArrayList<ShapeData>();
-        ShapeData instance = null;
+    public static ArrayList<ShapeFileData> getAllShapes(Databases db) {
+        ArrayList<ShapeFileData> items = new ArrayList<ShapeFileData>();
+        ShapeFileData instance = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
         String query = "select * from " + TABLE_NAME ;
         LOG.log("Query:", "Query:" + query);
         Cursor c = dbRead.rawQuery(query, null);
         if (c.moveToFirst()) {
             do {
-                instance = new ShapeData();
+                instance = new ShapeFileData();
                 instance.id = c.getInt(c.getColumnIndex(ID));
-                instance.shapeType = c.getString(c.getColumnIndex(SHAPE_TYPE));
-                instance.shapeName = c.getString(c.getColumnIndex(SHAPE_NAME));
+                instance.shapeType = c.getString(c.getColumnIndex(SHAPE_FILE_PATH));
+                instance.shapeName = c.getString(c.getColumnIndex(SHAPE_FILE_NAME));
                 items.add(instance);
             } while ( c.moveToNext()) ;
         }
@@ -116,7 +116,7 @@ public class ShapeData {
     }
 
     public static void wipeData(Databases db) {
-        ShapeData.deleteTable(db);
+        ShapeFileData.deleteTable(db);
         ShapeField.deleteTable(db);
         ShapeFieldData.deleteTable(db);
         ShapePoint.deleteTable(db);

@@ -90,7 +90,7 @@ public class ShapePoint {
 
 
 
-    public static ShapePoint getAllPointsOfAShape(Databases db, int shapeId) {
+    public static ShapePoint getAllPointsOfAShape(Databases db, long shapeId) {
         ArrayList<ShapePoint> items = new ArrayList<ShapePoint>();
         ShapePoint instance = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();

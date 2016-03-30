@@ -1,5 +1,6 @@
 package com.texus.shapefileviewer.task;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
@@ -7,6 +8,7 @@ import android.util.Log;
 import com.google.android.gms.maps.model.LatLng;
 import com.texus.shapefileviewer.MainActivity;
 import com.texus.shapefileviewer.datamodel.ShapeData;
+import com.texus.shapefileviewer.datamodel.ShapeFieldData;
 import com.texus.shapefileviewer.db.Databases;
 
 import org.codehaus.jackson.JsonFactory;
@@ -15,7 +17,6 @@ import org.codehaus.jackson.JsonToken;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * Created by sandeep on 21/3/16.
@@ -24,15 +25,18 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
 
     MainActivity mainActivity = null;
     ArrayList<LatLng> latLngs = null;
+    Context context;
+
 
     @Override
     protected void onPreExecute() {
         super.onPreExecute();
     }
 
-    public JsonMapDataParseTask( MainActivity mainActivity ) {
+    public JsonMapDataParseTask( MainActivity mainActivity, Context context) {
         this.mainActivity = mainActivity;
         latLngs = new ArrayList<LatLng>();
+        this.context = context;
     }
 
     @Override
@@ -69,7 +73,7 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
             Log.e("JSON Parsing", "-------------------------------------");
             Log.e("JSON Parsing", "-------------------------------------");
             ShapeData shapeData = new ShapeData();
-            Databases db = new Databases(mainActivity);
+            Databases db = new Databases(context);
             shapeData.id = ShapeData.getID(db);
             ShapeData.inseartOperation(db,shapeData);
 
@@ -126,20 +130,25 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
                                                 jParser.nextToken();
                                                 if( jParser.getCurrentToken() ==  JsonToken.START_OBJECT) {
 
-                                                    HashMap<String,String> fieldAndValues = new HashMap<>();
+                                                    ArrayList<ShapeFieldData> shapeFieldDatas = new ArrayList<ShapeFieldData>();
                                                     while(jParser.nextToken() != JsonToken.END_OBJECT) {
-                                                        ;
-//                                                        Log.e("JSON Parsing", "properties Text:" + jParser.getText());
                                                         if( jParser.getCurrentToken()== JsonToken.FIELD_NAME) {
-
+                                                            ShapeFieldData fieldData = new ShapeFieldData();
+                                                            fieldData.shapeID = shapeData.id;
                                                             String fieldName = jParser.getText();
-//                                                            Log.e("JSON Parsing","properties Attributes:" + fetchedValue);
                                                             jParser.nextToken();
                                                             String fieldValue = jParser.getText();
-//                                                            Log.e("JSON Parsing","properties Value:" + fetchedValue);
-                                                            fieldAndValues.put(fieldName,fieldValue);
+                                                            if(fieldValue.trim().length() != 0 || true) {
+                                                                ShapeFieldData data = new ShapeFieldData();
+                                                                data.shapeID = shapeData.id;
+                                                                data.fieldData = fieldValue;
+                                                                data.fieldName = fieldName;
+                                                                shapeFieldDatas.add(data);
+                                                            }
                                                         }
                                                     }
+                                                    ShapeFieldData.insertOperation(db, shapeFieldDatas);
+
 
 //                                                    Log.e("JSON Parsing", "While End:" + jParser.getText());
                                                 }
@@ -228,11 +237,11 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
     @Override
     protected void onProgressUpdate(Void... values) {
         super.onProgressUpdate(values);
-        if(mainActivity != null) {
-            mainActivity.plotShape((ArrayList<LatLng>)latLngs.clone());
-            Log.e("PUBLISH", "_______________________________________________");
-            Log.e("PUBLISH","_______________________________________________");
-        }
+//        if(mainActivity != null) {
+//            mainActivity.plotShape((ArrayList<LatLng>)latLngs.clone());
+//            Log.e("PUBLISH", "_______________________________________________");
+//            Log.e("PUBLISH","_______________________________________________");
+//        }
     }
 
     @Override

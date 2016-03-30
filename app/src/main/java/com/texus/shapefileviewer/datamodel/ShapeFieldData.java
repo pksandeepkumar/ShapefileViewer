@@ -12,7 +12,7 @@ import java.util.HashMap;
 /**
  * Created by sandeep on 8/2/16.
  */
-public class ShapeFieldData {
+public class ShapeFieldData extends BaseDataModel {
 
     public static final String TABLE_NAME = "TableShapeFieldData";
 
@@ -23,27 +23,60 @@ public class ShapeFieldData {
 
     public static HashMap<String,Long> fieldIdMap = null;
 
-    public int id;
-    public int shapeID;
-    public int fieldID;
+    public long id;
+    public long shapeID;
+    public long fieldID;
     public String fieldName;
     public String fieldData;
 
-    public static long getIdOfFieldName(String fieldName) {
+    public static void clearFieldNameIdHashMap() {
+        fieldIdMap = new HashMap<>();
+    }
+
+    public static void insertFieldNamesOnlyOrGetFieldIDs(Databases db, ArrayList<ShapeFieldData> objects) {
+
+        if(fieldIdMap == null) clearFieldNameIdHashMap();
+
+        if( fieldIdMap.size() > 0) {
+            for( ShapeFieldData object : objects) {
+                object.fieldID = fieldIdMap.get( object.fieldName);
+            }
+            return;
+        }
+
+        for( ShapeFieldData object : objects) {
+            ShapeField field = new ShapeField();
+            field.fieldName = object.fieldName;
+            field.shapeID = object.shapeID;
+            object.fieldID  = ShapeField.insertOperation(db, field);
+            fieldIdMap.put(object.fieldName, object.fieldID);
+        }
+
+
+
+
+    }
+
+
+    /**
+     * Keep a hashmap for getting id of field of this shape id
+     * @param fieldName
+     * @return
+     */
+    public static long getIdOfFieldName(Databases db, String fieldName, long shapeID) {
         if(fieldIdMap == null) {
             fieldIdMap = new HashMap<>();
         }
-
         Long id = fieldIdMap.get(fieldName);
         if(id != null) {
            return id;
         } else {
             ShapeField field = new ShapeField();
             field.fieldName = fieldName;
-            ShapeField
+            field.shapeID = shapeID;
+            id = ShapeField.insertOperation(db,field);
         }
-
-
+        return id;
     }
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
@@ -65,33 +98,56 @@ public class ShapeFieldData {
         return instance;
     }
 
-    public static boolean inseartOperation( Databases db , ShapeFieldData instance) {
+    public static boolean insertOperation(Databases db, ShapeFieldData instance) {
         SQLiteDatabase sql = db.getWritableDatabase();
         String query = "";
+        instance.fieldID = getIdOfFieldName(db,instance.fieldName,instance.shapeID);
         query = "insert into " + TABLE_NAME + " ("
                 + FIELD_ID + ","
                 + FIELD_DATA + ","
                 + SHAPE_ID + " ) values ( "
                 + "" + instance.fieldID + ","
-                + "'" + instance.fieldData.replaceAll("'","\'") + "',"
+                + "'" + instance.makeItValidForSQLQuery(instance.fieldData) + "',"
                 + "" + instance.shapeID + ");";
         LOG.log("Query:", "Query:" + query);
         sql.execSQL(query);
         return true;
     }
 
-    public static boolean inseartOperation( Databases db , ArrayList<ShapeFieldData> objects) {
+    public static boolean insertOperation(Databases db, ArrayList<ShapeFieldData> objects) {
+
+        insertFieldNamesOnlyOrGetFieldIDs(db,objects);
+
         SQLiteDatabase sql = db.getWritableDatabase();
         String query = "";
         for( ShapeFieldData object : objects) {
+            //If no data, we can skip this object
+            if(object.fieldData.trim().length() ==  0) continue;
+
+//            object.fieldID = getIdOfFieldName(db,object.fieldName,object.shapeID);
+
+//            ContentValues insertValues = new ContentValues();
+//            insertValues.put(FIELD_ID, object.fieldID);
+//            insertValues.put(FIELD_DATA, object.makeItValidForSQLQuery(object.fieldData));
+//            insertValues.put(SHAPE_ID, object.shapeID);
+//            long id = sql.insert(TABLE_NAME, null, insertValues);
+            LOG.log("Query:", "Inserted....");
+
             query = "insert into " + TABLE_NAME + " ("
                     + FIELD_ID + ","
                     + FIELD_DATA + ","
                     + SHAPE_ID + " ) values ( "
                     + "" + object.fieldID + ","
-                    + "'" + object.fieldData.replaceAll("'","\'") + "',"
+                    + "'" + object.makeItValidForSQLQuery(object.fieldData) + "',"
                     + "" + object.shapeID + ");";
             LOG.log("Query:", "Query:" + query);
+
+            if(sql == null) {
+                LOG.log("Query:", "sql is NULL");
+            } else {
+                LOG.log("Query:", "sql is NOT NULL");
+            }
+
             sql.execSQL(query);
         }
         sql.close();
@@ -119,7 +175,7 @@ public class ShapeFieldData {
     }
 
 
-    public static ArrayList<ShapeFieldData> getAllFieldDataForAShape(Databases db, int shapeID) {
+    public static ArrayList<ShapeFieldData> getAllFieldDataForAShape(Databases db, long shapeID) {
         ArrayList<ShapeFieldData> objects = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
 //        String query = "select DISTINCT  from " + TABLE_NAME + "," + ShapeField.TABLE_NAME + "  WHERE "
