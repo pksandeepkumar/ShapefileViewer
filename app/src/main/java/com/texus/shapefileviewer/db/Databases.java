@@ -23,6 +23,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import com.texus.shapefileviewer.datamodel.ShapeData;
 import com.texus.shapefileviewer.datamodel.ShapeField;
 import com.texus.shapefileviewer.datamodel.ShapeFieldData;
+import com.texus.shapefileviewer.datamodel.ShapeFileData;
 import com.texus.shapefileviewer.datamodel.ShapePoint;
 import com.texus.shapefileviewer.utility.LOG;
 
@@ -70,6 +71,7 @@ public class Databases extends SQLiteOpenHelper {
 	 */
 	private void loadQuery() {
 		query_create_tables = new ArrayList<String>();
+        query_create_tables.add(ShapeFileData.CREATE_TABE_QUERY);
 		query_create_tables.add(ShapeData.CREATE_TABE_QUERY);
         query_create_tables.add(ShapeField.CREATE_TABE_QUERY);
         query_create_tables.add(ShapeFieldData.CREATE_TABE_QUERY);

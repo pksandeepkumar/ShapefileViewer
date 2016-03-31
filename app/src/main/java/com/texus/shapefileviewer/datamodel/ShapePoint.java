@@ -1,5 +1,6 @@
 package com.texus.shapefileviewer.datamodel;
 
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -12,7 +13,7 @@ import java.util.ArrayList;
 /**
  * Created by sandeep on 8/2/16.
  */
-public class ShapePoint {
+public class ShapePoint extends BaseDataModel  {
 
     public static final String TABLE_NAME = "TableShapePoints";
 
@@ -22,11 +23,14 @@ public class ShapePoint {
     public static final String LONGITUDE = "Longitude";
     public static final String FILE_NAME_OR_POINTS = "FileNameOrPoints";
 
-    public int id;
-    public int shapeId;
+    public long shapeId;
     public double latitude;
     public double longitude;
     public String filename;
+
+    public ShapePoint() {
+        super();
+    }
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
             + " (  " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
@@ -50,20 +54,30 @@ public class ShapePoint {
         return instance;
     }
 
+    public static long insertOperation(SQLiteDatabase sql, ShapePoint shapePoint) {
+        ContentValues insertValues = new ContentValues();
+        insertValues.put(ID_SHAPE, shapePoint.shapeId);
+        insertValues.put(FILE_NAME_OR_POINTS, shapePoint.filename);
+        insertValues.put(LATITUDE, shapePoint.latitude);
+        insertValues.put(LONGITUDE, shapePoint.longitude);
+        return sql.insert(TABLE_NAME, null, insertValues);
+    }
+
     public static boolean inseartOperation( Databases db , ShapePoint instance) {
         SQLiteDatabase sql = db.getWritableDatabase();
-        String query = "";
-        query = "insert into " + TABLE_NAME + " ("
-                + ID_SHAPE + ","
-                + FILE_NAME_OR_POINTS + ","
-                + LATITUDE + ","
-                + LONGITUDE + " ) values ( "
-                + "" + instance.shapeId + ","
-                + "'" + instance.filename + "',"
-                + "" + instance.latitude + ","
-                + "" + instance.longitude + ");";
-//        if(AppConstance.D) LOG.log("Query:", "Query:" + query);
-        sql.execSQL(query);
+        insertOperation(sql,instance);
+//        String query = "";
+//        query = "insert into " + TABLE_NAME + " ("
+//                + ID_SHAPE + ","
+//                + FILE_NAME_OR_POINTS + ","
+//                + LATITUDE + ","
+//                + LONGITUDE + " ) values ( "
+//                + "" + instance.shapeId + ","
+//                + "'" + instance.filename + "',"
+//                + "" + instance.latitude + ","
+//                + "" + instance.longitude + ");";
+////        if(AppConstance.D) LOG.log("Query:", "Query:" + query);
+//        sql.execSQL(query);
         return true;
     }
 
@@ -71,17 +85,18 @@ public class ShapePoint {
         SQLiteDatabase sql = db.getWritableDatabase();
         String query = "";
         for(ShapePoint instance: objects) {
-            query = "insert into " + TABLE_NAME + " ("
-                    + ID_SHAPE + ","
-                    + FILE_NAME_OR_POINTS + ","
-                    + LATITUDE + ","
-                    + LONGITUDE + " ) values ( "
-                    + "" + instance.shapeId + ","
-                    + "'" + instance.filename + "',"
-                    + "" + instance.latitude + ","
-                    + "" + instance.longitude + ");";
-//            if(AppConstance.D) LOG.log("Query:", "Query:" + query);
-            sql.execSQL(query);
+            insertOperation(sql, instance);
+//            query = "insert into " + TABLE_NAME + " ("
+//                    + ID_SHAPE + ","
+//                    + FILE_NAME_OR_POINTS + ","
+//                    + LATITUDE + ","
+//                    + LONGITUDE + " ) values ( "
+//                    + "" + instance.shapeId + ","
+//                    + "'" + instance.filename + "',"
+//                    + "" + instance.latitude + ","
+//                    + "" + instance.longitude + ");";
+////            if(AppConstance.D) LOG.log("Query:", "Query:" + query);
+//            sql.execSQL(query);
         }
 
 

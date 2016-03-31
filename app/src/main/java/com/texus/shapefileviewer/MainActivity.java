@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -40,6 +41,7 @@ import com.texus.shapefileviewer.component.ComponentInfo;
 import com.texus.shapefileviewer.datamodel.ShapeData;
 import com.texus.shapefileviewer.datamodel.ShapeField;
 import com.texus.shapefileviewer.datamodel.ShapeFieldData;
+import com.texus.shapefileviewer.datamodel.ShapeFileData;
 import com.texus.shapefileviewer.datamodel.ShapePoint;
 import com.texus.shapefileviewer.db.Databases;
 import com.texus.shapefileviewer.dialogs.FileChooser;
@@ -51,13 +53,16 @@ import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shp.shapeTypes.Sh
 import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shp.shapeTypes.ShpShape;
 import com.texus.shapefileviewer.shape.diewald_shapeFile.files.shx.SHX_File;
 import com.texus.shapefileviewer.shape.diewald_shapeFile.shapeFile.ShapeFile;
-import com.texus.shapefileviewer.task.JsonMapDataParseTask;
 import com.texus.shapefileviewer.utility.LOG;
 import com.texus.shapefileviewer.utility.Utility;
+import com.texus.shapefileviewer.watcher.TimeWatcher;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mContext = this;
+        AppConstance.loadConfiguration();
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -103,6 +109,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             public void onClick(View view) {
                 exportDatabse();
 //                openFileChooserDialog();
+                traverseShape();
             }
         });
 
@@ -133,9 +140,58 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 //            displayShapesTask.execute();
 //        }
 
-        JsonMapDataParseTask task = new JsonMapDataParseTask(this,this);
-        task.execute();
+//        JsonMapDataParseTask task = new JsonMapDataParseTask(this,this);
+//        task.execute();
 
+
+
+    }
+
+
+    public void traverseShape() {
+
+        Databases db = new Databases( this );
+        ShapePoint.deleteTable(db);
+        TimeWatcher watcher = new TimeWatcher();
+        watcher.setStartTime();;
+
+        ArrayList<ShapeFileData> datas = ShapeFileData.getAllshapeFileData(db);
+        if(datas == null) return;
+        for(ShapeFileData data : datas) {
+            ArrayList<ShapeData> shapeDatas = ShapeData.getAllShapesForASHapeFile(db, data.id);
+            for(ShapeData shapeData : shapeDatas) {
+                Log.e("Point:" ,"Point:" + readFile(AppConstance.FILE_BASE_PATH
+                        + File.separator + data.id + File.separator + data.id + "_" + shapeData.id));
+//                ShapePoint shapePoint = ShapePoint.getAllPointsOfAShape(db,shapeData.id);
+//                if( shapePoint != null) {
+//                    Log.e("Point:" ,"Point:" + shapePoint.filename);
+//                }
+            }
+        }
+
+        db.close();
+        watcher.setEndTime();
+        Log.e("Watcher","Totla Time Taken:" + watcher.getTotalTimeTaken());
+
+    }
+
+
+    public String readFile(String fileName) {
+        File file = new File(fileName);
+        StringBuilder text = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = br.readLine()) != null) {
+                text.append(line);
+                text.append('\n');
+            }
+            br.close();
+        }
+        catch (IOException e) {
+            //You'll need to add proper error handling here
+        }
+        return text.toString();
     }
 
 

@@ -1,5 +1,6 @@
 package com.texus.shapefileviewer.datamodel;
 
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -20,14 +21,20 @@ public class ShapeFieldData extends BaseDataModel {
     public static final String SHAPE_ID = "ShapeID";
     public static final String FIELD_ID = "FieldID";
     public static final String FIELD_DATA = "FieldData";
+    public static final String SHAPE_FILE_ID = "ShapeFileID";
 
     public static HashMap<String,Long> fieldIdMap = null;
 
-    public long id;
     public long shapeID;
     public long fieldID;
+    public long shapeFileID;
     public String fieldName;
     public String fieldData;
+
+    public ShapeFieldData() {
+        super();
+    }
+
 
     public static void clearFieldNameIdHashMap() {
         fieldIdMap = new HashMap<>();
@@ -43,18 +50,13 @@ public class ShapeFieldData extends BaseDataModel {
             }
             return;
         }
-
         for( ShapeFieldData object : objects) {
             ShapeField field = new ShapeField();
             field.fieldName = object.fieldName;
-            field.shapeID = object.shapeID;
+            field.shapeFileID = object.shapeFileID;
             object.fieldID  = ShapeField.insertOperation(db, field);
             fieldIdMap.put(object.fieldName, object.fieldID);
         }
-
-
-
-
     }
 
 
@@ -73,7 +75,7 @@ public class ShapeFieldData extends BaseDataModel {
         } else {
             ShapeField field = new ShapeField();
             field.fieldName = fieldName;
-            field.shapeID = shapeID;
+            field.shapeFileID = shapeID;
             id = ShapeField.insertOperation(db,field);
         }
         return id;
@@ -83,6 +85,7 @@ public class ShapeFieldData extends BaseDataModel {
             + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
             + SHAPE_ID + " INTEGER , "
             + FIELD_ID + " INTEGER , "
+            + SHAPE_FILE_ID + " INTEGER , "
             + FIELD_DATA + " TEXT );";
 
     public static ShapeFieldData getAnObjectFromCursor(Cursor c) {
@@ -91,6 +94,7 @@ public class ShapeFieldData extends BaseDataModel {
             instance = new ShapeFieldData();
             instance.shapeID = c.getInt(c.getColumnIndex(SHAPE_ID));
             instance.fieldID = c.getInt(c.getColumnIndex(FIELD_ID));
+            instance.shapeFileID = c.getInt(c.getColumnIndex(SHAPE_FILE_ID));
             instance.fieldData = c.getString(c.getColumnIndex(FIELD_DATA));
         } else {
             LOG.log("getAnObjectFromCursor:", "getAnObjectFromCursor Cursor is null");
@@ -98,57 +102,31 @@ public class ShapeFieldData extends BaseDataModel {
         return instance;
     }
 
-    public static boolean insertOperation(Databases db, ShapeFieldData instance) {
-        SQLiteDatabase sql = db.getWritableDatabase();
-        String query = "";
+    public static long insertOperation(SQLiteDatabase sql, ShapeFieldData instance) {
+        ContentValues insertValues = new ContentValues();
+        insertValues.put(FIELD_ID, instance.fieldID);
+        insertValues.put(FIELD_DATA, instance.fieldData);
+        insertValues.put(SHAPE_ID, instance.shapeID);
+        insertValues.put(SHAPE_FILE_ID, instance.shapeFileID);
+        return sql.insert(TABLE_NAME, null, insertValues);
+
+    }
+
+    public static long insertOperation(Databases db, ShapeFieldData instance) {
+        long insertedID = INVALID_VALUE;
         instance.fieldID = getIdOfFieldName(db,instance.fieldName,instance.shapeID);
-        query = "insert into " + TABLE_NAME + " ("
-                + FIELD_ID + ","
-                + FIELD_DATA + ","
-                + SHAPE_ID + " ) values ( "
-                + "" + instance.fieldID + ","
-                + "'" + instance.makeItValidForSQLQuery(instance.fieldData) + "',"
-                + "" + instance.shapeID + ");";
-        LOG.log("Query:", "Query:" + query);
-        sql.execSQL(query);
-        return true;
+        SQLiteDatabase sql = db.getWritableDatabase();
+        return insertOperation(sql, instance);
     }
 
     public static boolean insertOperation(Databases db, ArrayList<ShapeFieldData> objects) {
-
         insertFieldNamesOnlyOrGetFieldIDs(db,objects);
-
         SQLiteDatabase sql = db.getWritableDatabase();
         String query = "";
         for( ShapeFieldData object : objects) {
             //If no data, we can skip this object
             if(object.fieldData.trim().length() ==  0) continue;
-
-//            object.fieldID = getIdOfFieldName(db,object.fieldName,object.shapeID);
-
-//            ContentValues insertValues = new ContentValues();
-//            insertValues.put(FIELD_ID, object.fieldID);
-//            insertValues.put(FIELD_DATA, object.makeItValidForSQLQuery(object.fieldData));
-//            insertValues.put(SHAPE_ID, object.shapeID);
-//            long id = sql.insert(TABLE_NAME, null, insertValues);
-            LOG.log("Query:", "Inserted....");
-
-            query = "insert into " + TABLE_NAME + " ("
-                    + FIELD_ID + ","
-                    + FIELD_DATA + ","
-                    + SHAPE_ID + " ) values ( "
-                    + "" + object.fieldID + ","
-                    + "'" + object.makeItValidForSQLQuery(object.fieldData) + "',"
-                    + "" + object.shapeID + ");";
-            LOG.log("Query:", "Query:" + query);
-
-            if(sql == null) {
-                LOG.log("Query:", "sql is NULL");
-            } else {
-                LOG.log("Query:", "sql is NOT NULL");
-            }
-
-            sql.execSQL(query);
+            insertOperation(sql, object);
         }
         sql.close();
         return true;
@@ -179,7 +157,7 @@ public class ShapeFieldData extends BaseDataModel {
         ArrayList<ShapeFieldData> objects = null;
         SQLiteDatabase dbRead = db.getReadableDatabase();
 //        String query = "select DISTINCT  from " + TABLE_NAME + "," + ShapeField.TABLE_NAME + "  WHERE "
-//                + SHAPE_ID + " = '" + shapeID + "' " ;
+//                + SHAPE_FILE_ID + " = '" + shapeFileID + "' " ;
         String query = "select *  from " + TABLE_NAME  + "  WHERE "
                 + SHAPE_ID + " = '" + shapeID + "' " ;
         LOG.log("Query:", "Query:" + query);

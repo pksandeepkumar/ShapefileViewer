@@ -191,8 +191,8 @@ public class ShapeFile {
   }
   
   /**
-   * get the shapeType of the shapes contained in the file.
-   * @return shapeType
+   * get the shapeFilePath of the shapes contained in the file.
+   * @return shapeFilePath
    */
   public ShpShape.Type getSHP_shapeType(){
     return shp_file.getHeader().getShapeType();

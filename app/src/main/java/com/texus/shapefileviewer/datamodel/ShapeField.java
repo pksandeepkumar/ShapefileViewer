@@ -4,28 +4,30 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.texus.shapefileviewer.AppConstance;
 import com.texus.shapefileviewer.db.Databases;
 import com.texus.shapefileviewer.utility.LOG;
 
 /**
  * Created by sandeep on 8/2/16.
  */
-public class ShapeField {
+public class ShapeField extends BaseDataModel  {
 
     public static final String TABLE_NAME = "TableShapeField";
 
     public static final String ID = "id";
-    public static final String SHAPE_ID = "ShapeID";
+    public static final String SHAPE_FILE_ID = "ShapeFileID";
     public static final String FIELD_NAME = "FieldName";
 
-    public long id;
-    public long shapeID;
+    public long shapeFileID;
     public String fieldName;
+
+    public ShapeField() {
+        super();
+    }
 
     public static final String CREATE_TABE_QUERY = "CREATE TABLE  " + TABLE_NAME
             + " ( " + ID + " INTEGER  PRIMARY KEY AUTOINCREMENT, "
-            + SHAPE_ID + " INTEGER , "
+            + SHAPE_FILE_ID + " INTEGER , "
             + FIELD_NAME + " TEXT );";
 
 
@@ -38,17 +40,17 @@ public class ShapeField {
      */
     public static long insertOperation( Databases db , ShapeField shapeField) {
 
-        if(shapeField == null) return AppConstance.INVALID_VALUE;
+        if(shapeField == null) return INVALID_VALUE;
 
-        ShapeField tempField = getAnObject(db, shapeField.fieldName, shapeField.shapeID);
+        ShapeField tempField = getAnObject(db, shapeField.fieldName, shapeField.shapeFileID);
 
         if(tempField != null) {
-            return tempField.shapeID;
+            return tempField.shapeFileID;
         }
 
         SQLiteDatabase sql = db.getWritableDatabase();
         ContentValues insertValues = new ContentValues();
-        insertValues.put(SHAPE_ID, shapeField.shapeID);
+        insertValues.put(SHAPE_FILE_ID, shapeField.shapeFileID);
         insertValues.put(FIELD_NAME, shapeField.fieldName);
         long id = sql.insert(TABLE_NAME, null, insertValues);
         sql.close();
@@ -98,7 +100,7 @@ public class ShapeField {
         SQLiteDatabase dbRead = db.getReadableDatabase();
         String query = "select * from " + TABLE_NAME + " WHERE "
                 + FIELD_NAME + " = '" + fieldName.replaceAll("'","\'") + "' AND "
-                + SHAPE_ID + " = " + shapeID;
+                + SHAPE_FILE_ID + " = " + shapeID;
         LOG.log("Query:", "Query:" + query);
         Cursor c = dbRead.rawQuery(query, null);
         if (c.moveToFirst()) {
