@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.maps.android.geojson.GeoJsonLayer;
 import com.texus.shapefileviewer.adapters.FieldDataAdapter;
 import com.texus.shapefileviewer.component.ComponentInfo;
 import com.texus.shapefileviewer.datamodel.ShapeData;
@@ -107,9 +108,10 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                exportDatabse();
+//                exportDatabse();
 //                openFileChooserDialog();
-                traverseShape();
+//                traverseShape();
+                geoJsonSetUp();
             }
         });
 
@@ -160,8 +162,12 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         for(ShapeFileData data : datas) {
             ArrayList<ShapeData> shapeDatas = ShapeData.getAllShapesForASHapeFile(db, data.id);
             for(ShapeData shapeData : shapeDatas) {
-                Log.e("Point:" ,"Point:" + readFile(AppConstance.FILE_BASE_PATH
-                        + File.separator + data.id + File.separator + data.id + "_" + shapeData.id));
+                for( int i = 1; i <= shapeData.noOfParcels; i++) {
+                    Log.e("Point:" ,"Point:" + readFile(AppConstance.FILE_BASE_PATH
+                            + File.separator + data.id + File.separator + data.id
+                            + "_" + shapeData.id + "_" + i));
+                }
+
 //                ShapePoint shapePoint = ShapePoint.getAllPointsOfAShape(db,shapeData.id);
 //                if( shapePoint != null) {
 //                    Log.e("Point:" ,"Point:" + shapePoint.filename);
@@ -197,7 +203,7 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
 
     public int getPolygonID(Polygon polygon) {
-        return Utility.parseInt(polygon.getId().replaceAll("pg","").trim());
+        return Utility.parseInt(polygon.getId().replaceAll("pg", "").trim());
     }
 
     public void setSelected(Polygon polygon) {
@@ -381,6 +387,17 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
 
     }
 
+    public void geoJsonSetUp() {
+        try {
+            GeoJsonLayer layer = new GeoJsonLayer(map, R.raw.one_parcel, mContext);
+            layer.addLayerToMap();
+
+        } catch ( Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
 
     public LatLng plotSHape(ShapePoint shapePoint, int color, boolean needFill){
         if(shapePoint == null) return null;
@@ -392,9 +409,14 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             String[] spiltMain = shapePoint.filename.split(":");
             for(String sub : spiltMain) {
                 String[] splitSub = sub.split(",");
-                lat = Utility.parseDouble(splitSub[0]);
-                lon = Utility.parseDouble(splitSub[1]);
-                rectOptions.add(new LatLng(lat, lon));
+                try{
+                    lat = Utility.parseDouble(splitSub[0]);
+                    lon = Utility.parseDouble(splitSub[1]);
+                    rectOptions.add(new LatLng(lat, lon));
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    e.printStackTrace();
+                }
+
 //                LOG.log("plotSHape", "Added lat lon:" + lat + ":" + lon);
             }
             LatLng point = new LatLng(lat,lon );
@@ -475,6 +497,104 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
             task.execute();
         }
     }
+
+    public class DisplayShapesTaskFromFile extends AsyncTask<Void, ShapePoint, Void> {
+
+        boolean flagDrawn = false;
+        boolean flagGotoLoc = true;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        public DisplayShapesTaskFromFile() {
+            map.clear();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+
+            Databases db = new Databases( mContext );
+            ShapePoint.deleteTable(db);
+            TimeWatcher watcher = new TimeWatcher();
+            watcher.setStartTime();;
+
+            ArrayList<ShapeFileData> datas = ShapeFileData.getAllshapeFileData(db);
+            if(datas == null) return null;
+            for(ShapeFileData data : datas) {
+                ArrayList<ShapeData> shapeDatas = ShapeData.getAllShapesForASHapeFile(db, data.id);
+                for(ShapeData shapeData : shapeDatas) {
+                    for( int i = 1; i <= shapeData.noOfParcels; i++) {
+
+                        ShapePoint point = new ShapePoint();
+                        point.filename = readFile(AppConstance.FILE_BASE_PATH
+                                + File.separator + data.id + File.separator + data.id
+                                + "_" + shapeData.id + "_" + i);
+                        flagDrawn = false;
+                        publishProgress(point);
+                        while (!flagDrawn) {}
+
+                    }
+
+//                ShapePoint shapePoint = ShapePoint.getAllPointsOfAShape(db,shapeData.id);
+//                if( shapePoint != null) {
+//                    Log.e("Point:" ,"Point:" + shapePoint.filename);
+//                }
+                }
+            }
+
+            db.close();
+
+//            drawing = true;
+//            Databases db = new Databases(mContext);
+//            //Read shape id only, because reading all point may cause outof memmory erros, to avoid
+//            // this we read each point string and plot
+//            ArrayList<ShapePoint> shapePoints = ShapePoint.getAllPointsOfAShape(db);
+//            LOG.log("doInBackground","shapePoints Size:" + shapePoints.size() );
+//            for( ShapePoint point : shapePoints) {
+//                LOG.log("doInBackground","Reading a point:" + point.shapeId );
+//                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
+//                //Read all points
+////                point = ShapePoint.getAllPointsOfAShape(db,point.shapeId);
+//                LOG.log("doInBackground","Reading a point POINTS:" + point.filename );
+//                if(point ==  null) continue;
+//                flagDrawn = false;
+//                publishProgress(point);
+//                while (!flagDrawn) {}
+//            }
+//            db.close();
+
+
+
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(ShapePoint... values) {
+            try{
+                ShapePoint point = values[0];
+                flagDrawn = true;
+                LatLng latLng = plotSHape(point,AppConstance.COLOR_DEFAULT,false);
+                if(flagGotoLoc ==  true) {
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
+                    map.animateCamera(cameraUpdate);
+                    flagGotoLoc = false;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            super.onPostExecute(result);
+            drawing = false;
+        }
+    }
+
+
 
     public class DisplayShapesTask extends AsyncTask<Void, ShapePoint, Void> {
 
@@ -647,7 +767,11 @@ public class MainActivity extends AppCompatActivity implements FileChooser.FileS
         int id = item.getItemId();
 
         if (id == R.id.action_settings) {
-            exportDatabse();
+
+            DisplayShapesTaskFromFile task = new DisplayShapesTaskFromFile();
+            task.execute();
+
+//            exportDatabse();
 //            plotSHapes();
 //            DisplayShapesTask task = new DisplayShapesTask();
 //            task.execute();

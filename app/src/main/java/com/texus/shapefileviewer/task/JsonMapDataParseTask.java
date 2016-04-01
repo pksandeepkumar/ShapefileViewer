@@ -201,20 +201,18 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
                                                                 jParser.nextToken();
                                                                 // start 1st [ of  [ [ [] [] [] ] ]
                                                                 if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
-
-                                                                    while(jParser.nextToken() != JsonToken.END_ARRAY) {
-                                                                        int onOfParcels = 0;
-
-                                                                        // Start 2nd [ of [ [ [] [] [] ] ]
-                                                                        if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
-                                                                            onOfParcels++;
+                                                                    int noOfParcels = 0;
+                                                                    while(jParser.nextToken() != JsonToken.END_ARRAY /* End of 1st [ */) {
+                                                                        if( jParser.getCurrentToken()==  JsonToken.START_ARRAY  /* Start 2nd [ of [ [ [] [] [] ] ] */) {
+                                                                            noOfParcels++;
                                                                             ShapePoint point = new ShapePoint();
                                                                             point.shapeId = shapeData.id;
                                                                             StringBuilder builder = new StringBuilder();
 //                                                                            latLngs = new ArrayList<LatLng>();
-                                                                            while(jParser.nextToken() != JsonToken.END_ARRAY) {
-                                                                                // Start 3rd [ of [ [ [] [] [] ] ]
-                                                                                if( jParser.getCurrentToken()==  JsonToken.START_ARRAY) {
+                                                                            while(jParser.nextToken() != JsonToken.END_ARRAY  /* End of 2nd [*/) {
+
+                                                                                // Start 3rd [ of [ [ [], [] ,[] ] ,[ [] [] [] ] ]
+                                                                                if( jParser.getCurrentToken()==  JsonToken.START_ARRAY/* Start 3rd [ of [ [ [] [] [] ] ] */) {
                                                                                     jParser.nextToken();
                                                                                     double latitiude = jParser.getDoubleValue();
                                                                                     jParser.nextToken();
@@ -224,11 +222,15 @@ public class JsonMapDataParseTask extends AsyncTask<Void, Void, Void> {
                                                                                     jParser.nextToken();
                                                                                 }
                                                                             }
-                                                                            writeToFile("" + shapeFileData.id + "_" + shapeData.id + "_" + onOfParcels , filePath, builder);
+                                                                            writeToFile("" + shapeFileData.id + "_" + shapeData.id + "_" + noOfParcels , filePath, builder);
                                                                             Log.e("Json Parsing", "--------------------Inserted shape point--------------------------");
                                                                         }
                                                                     }
-                                                                    ShapePoint.inseartOperation(db,points);
+                                                                    if(noOfParcels != ShapeData.DEFAULT_NO_OF_SHAPES) {
+                                                                        shapeData.noOfParcels = noOfParcels;
+                                                                        ShapeData.updateOperation(db, shapeData);
+                                                                    }
+
                                                                 }
 
                                                             }
